@@ -85,9 +85,11 @@
         }
         
         .logo-placeholder img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
         }
         
         .company-info h1 {
@@ -472,9 +474,18 @@
             }
             
             .logo-placeholder {
-                background: white !important;
+                background: #0d0d0d !important;
                 -webkit-print-color-adjust: exact !important;
                 color-adjust: exact !important;
+                border-radius: 50% !important;
+                border: 2px solid #c9a84c !important;
+            }
+
+            .logo-placeholder img {
+                border-radius: 50% !important;
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
             }
             
             /* Ensure colors print correctly */
@@ -504,7 +515,7 @@
                     <div class="invoice-meta">
                         <div class="meta-row">
                             <span>Fecha:</span>
-                            <span contenteditable="true" class="editable">27/01/2025</span>
+                            <span id="invoiceDate" contenteditable="true" class="editable">27/01/2025</span>
                         </div>
                         <div class="meta-row">
                             <span>Factura #:</span>
@@ -655,7 +666,17 @@
 
         // Add print button to the page
         document.addEventListener('DOMContentLoaded', function() {
-            
+
+            // Fecha actual por defecto (sigue siendo editable)
+            const dateEl = document.getElementById('invoiceDate');
+            if (dateEl && dateEl.textContent.trim() === '27/01/2025') {
+                const now = new Date();
+                const day   = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year  = now.getFullYear();
+                dateEl.textContent = `${day}/${month}/${year}`;
+            }
+
             const printBtn = document.createElement('button');
             printBtn.innerHTML = '🖨️ Imprimir Factura';
             printBtn.style.cssText = `
