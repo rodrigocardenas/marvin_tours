@@ -267,6 +267,17 @@
             font-size: 18px;
             color: var(--color-dark);
         }
+
+        .total-value {
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            color: var(--color-dark);
+        }
+
+        .total-row.final .total-value {
+            color: var(--color-primary-dk);
+            font-size: 18px;
+        }
         
         .observations {
             margin-top: 30px;
@@ -533,8 +544,8 @@
                 <div class="bill-from">
                     <h3>Datos de la Empresa</h3>
                     <div contenteditable="true" class="editable">Marvin Salas Vargas</div>
-                    <div contenteditable="true" class="editable">Calle Honduras 19, Bloque 1 piso 3</div>
-                    <div contenteditable="true" class="editable">28806, Alcalá de Henares</div>
+                    <div contenteditable="true" class="editable">Calle ciudad encantada 391 casa B</div>
+                    <div contenteditable="true" class="editable">19162, Pioz Guadalajara</div>
                     <div contenteditable="true" class="editable">España</div>
                     <div contenteditable="true" class="editable">NIE/NIF/CIF: 05963990K</div>
                 </div>
@@ -575,22 +586,38 @@
             <div class="totals-section">
                 <div class="total-row">
                     <span>Subtotal:</span>
-                    <span contenteditable="true" class="editable">150,00 €</span>
+                    <span id="totalSubtotal" class="total-value">150,00 €</span>
                 </div>
                 <div class="total-row">
-                    <span>IVA (10%):</span>
-                    <span contenteditable="true" class="editable">31,50 €</span>
+                    <span>IVA (<span id="ivaLabel">10</span>%):
+                        <small style="font-size:11px;color:var(--color-text-muted);margin-left:4px;">
+                            (<span contenteditable="true" id="ivaRate" style="min-width:20px;display:inline-block;cursor:text;border-bottom:1px dashed var(--color-primary)" title="Editar tipo de IVA">10</span>%)
+                        </small>
+                    </span>
+                    <span id="totalIva" class="total-value">15,00 €</span>
                 </div>
                 <div class="total-row final">
                     <span>TOTAL:</span>
-                    <span contenteditable="true" class="editable">181,50 €</span>
+                    <span id="totalFinal" class="total-value">165,00 €</span>
                 </div>
             </div>
 
-            <!-- Observations -->
+            <!-- payment method -->
             <div class="observations">
-                <div contenteditable="true" class="editable"><strong>Observaciones:</strong> Servicio de transporte turístico realizado según lo acordado. Pago a 30 días desde fecha de factura.</div>
+                <div contenteditable="true" class="editable"><strong>Métodos de pago:</strong> 
+                    <ul class="" style="margin-left: 5%;">
+                        <li>Transferencia bancaria: IBAN ES94 0049 3279 5829 1452 6403</li>
+                        <li>Bizum: +34 611022221</li>
+                        <li>Efectivo: Pago en mano al conductor</li>
+                    </ul>
+                </div>
+                
             </div>
+            
+            <!-- Observations -->
+            <!-- <div class="observations">
+                <div contenteditable="true" class="editable"><strong>Observaciones:</strong> Servicio de transporte turístico realizado según lo acordado.</div>
+            </div> -->
         </div>
 
         <!-- Footer -->
@@ -636,6 +663,37 @@
             }, 100);
         }
 
+        // ── Cálculo dinámico de totales ─────────────────────────
+        function parseAmount(text) {
+            // Acepta formatos: "150,00 €", "150.00", "150", etc.
+            const clean = text.replace(/[^0-9.,]/g, '').replace(',', '.');
+            const val = parseFloat(clean);
+            return isNaN(val) ? 0 : val;
+        }
+
+        function formatAmount(num) {
+            return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        }
+
+        function recalcTotals() {
+            const rows = document.querySelectorAll('#servicesBody tr');
+            let subtotal = 0;
+            rows.forEach(function(row) {
+                // La columna Importe es la 4ª (índice 3)
+                const cell = row.cells[3];
+                if (cell) subtotal += parseAmount(cell.textContent);
+            });
+
+            const ivaRateEl = document.getElementById('ivaRate');
+            const rate = parseAmount(ivaRateEl ? ivaRateEl.textContent : '10') / 100;
+            const iva   = subtotal * rate;
+            const total = subtotal + iva;
+
+            document.getElementById('totalSubtotal').textContent = formatAmount(subtotal);
+            document.getElementById('totalIva').textContent      = formatAmount(iva);
+            document.getElementById('totalFinal').textContent    = formatAmount(total);
+        }
+
         // Add new service row
         function addServiceRow() {
             const tbody = document.getElementById('servicesBody');
@@ -647,9 +705,10 @@
                 <td contenteditable="true" class="editable text-right">0,00 €</td>
             `;
             tbody.appendChild(newRow);
+            recalcTotals();
         }
 
-        // Auto-save functionality (stores in memory)
+        // Auto-save + recalc on input
         let invoiceData = {};
         
         document.addEventListener('input', function(e) {
@@ -657,6 +716,10 @@
                 const fieldId = Array.from(document.querySelectorAll('.editable')).indexOf(e.target);
                 invoiceData[fieldId] = e.target.textContent || e.target.innerText;
             }
+            // Recalcular si se edita la tabla o el tipo de IVA
+            const inTable = e.target.closest('#servicesBody');
+            const isIva   = e.target.id === 'ivaRate';
+            if (inTable || isIva) recalcTotals();
         });
 
         // Print functionality
@@ -666,6 +729,9 @@
 
         // Add print button to the page
         document.addEventListener('DOMContentLoaded', function() {
+
+            // Calcular totales iniciales
+            recalcTotals();
 
             // Fecha actual por defecto (sigue siendo editable)
             const dateEl = document.getElementById('invoiceDate');
